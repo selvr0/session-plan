@@ -1,0 +1,5 @@
+{
+  "name": "session-plan",
+  "owner": { "name": "selvr0" },
+  "plugins": [{ "name": "session-plan", "source": "./" }]
+}

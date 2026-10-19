@@ -1,0 +1,17 @@
+{
+  "name": "session-plan",
+  "version": "0.2.1",
+  "description": "Keep the work plan you agreed on with Claude in a side pane, step by step",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Pane and tool language (en, ko)",
+      "default": "en",
+      "options": ["en", "ko"]
+    }
+  },
+  "author": { "name": "selvr0" },
+  "license": "MIT",
+  "repository": "https://github.com/selvr0/session-plan"
+}
