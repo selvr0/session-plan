@@ -170,6 +170,17 @@ let hasDoingStep = false
 const statusMarkOf = (status: StepStatus) =>
   status === 'doing' ? (DOING_FRAMES[doingFrameIndex % DOING_FRAMES.length] ?? STATUS_MARK.doing) : STATUS_MARK[status]
 
+// /config 의 theme 값이 라이트 계열인지 (light, light-daltonized, light-ansi ...).
+// auto 는 실제 화면이 어느 쪽인지 알 수 없어서 다크로 봄
+let isLightTheme = false
+
+const isLightThemeValue = (value: unknown) => typeof value === 'string' && value.startsWith('light')
+
+// 진행 중 단계 색. 테마 키라서 사용자 테마의 색으로 그려짐
+//   다크: warning    (노랑)
+//   라이트: suggestion (파랑) ← 흰 배경에서 노랑이 잘 안 보여서
+const doingColorOf = () => (isLightTheme ? 'suggestion' : 'warning')
+
 export const register: Register = (on, options) => {
   text = resolveMessages(options.language)
 
@@ -180,6 +191,9 @@ export const register: Register = (on, options) => {
       doingFrameIndex += 1
       $.ui.invalidate('ui.render')
     })
+
+    const themeRow = (await $.config.list()).find(row => row.key === 'theme')
+    isLightTheme = isLightThemeValue(themeRow?.value)
 
     // 한 번 연 적이 있으면 새 세션에서도 엶. 이미 열린 패널도 다시 열어 제목을 지금 것으로 바꿔 줌
     const isPaneOpen = (await $.ui.panes()).some(pane => pane.id === PANE)
@@ -207,6 +221,17 @@ export const register: Register = (on, options) => {
     await $.store.set(AUTO_OPEN_KEY, true)
 
     return { text: text.command.opened }
+  })
+
+  // 테마를 바꾸면 진행 중 색을 바로 바꿔 다시 그림
+  on('config.set', { key: 'theme' }, async ($, e, next) => {
+    const result = await next(e)
+    if ('value' in result) {
+      isLightTheme = isLightThemeValue(result.value)
+      $.ui.invalidate('ui.render')
+    }
+
+    return result
   })
 
   // 순서를 제안·합의·기록하라는 규칙을 시스템 프롬프트 끝에 넣음. 글자가 매번 같아서 캐시가 유지됨
@@ -268,7 +293,7 @@ export const register: Register = (on, options) => {
           const isDoing = step.status === 'doing'
           const stepNumber = `${stepIndex + 1}.`.padStart(numberWidth)
           const stepText = (
-            <Text dimColor={isDone} bold={isDoing} color={isDoing ? 'yellow' : undefined}>
+            <Text dimColor={isDone} bold={isDoing} color={isDoing ? doingColorOf() : undefined}>
               {stepNumber} {statusMarkOf(step.status)} {step.text}
               {isDoing ? text.pane.inProgress : ''}
             </Text>
@@ -299,7 +324,7 @@ export const register: Register = (on, options) => {
                 substeps.map((sub, subIndex) => (
                   <Text
                     dimColor={sub.status === 'done'}
-                    color={sub.status === 'doing' ? 'yellow' : undefined}
+                    color={sub.status === 'doing' ? doingColorOf() : undefined}
                   >
                     {' '.repeat(numberWidth + 1)}
                     {stepIndex + 1}.{subIndex + 1} {statusMarkOf(sub.status)} {sub.text}
